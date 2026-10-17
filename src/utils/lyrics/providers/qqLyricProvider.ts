@@ -103,7 +103,7 @@ export async function searchQQSongs(keyword: string, page = 1, pageSize = 20): P
     ),
     remoteplace: "search.android.keyboard",
     query: safeKeyword.length > 60 ? safeKeyword.slice(0, 60) : safeKeyword,
-    search_type: 0, // 0 = SONG
+    search_type: 7, // Lite song search: type 0 returns upstream code 2001 (#695).
     num_per_page: pagesize,
     page_num: page,
     highlight: 0,

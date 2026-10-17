@@ -64,6 +64,7 @@ describe('QQ lyric provider', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
         const searchRequestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
         expect(searchRequestBody.request.method).toBe('DoSearchForQQMusicLite');
+        expect(searchRequestBody.request.param.search_type).toBe(7);
     });
 
     it('normalizes QQ search covers and duration for metadata matching', async () => {
