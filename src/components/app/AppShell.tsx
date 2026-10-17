@@ -53,6 +53,7 @@ const AppShell: React.FC<AppShellProps> = ({
     usePlayerOverlayRoot(layoutRootRef, isPlayerView, { top: usesCustomWindowChrome ? TITLEBAR_REVEAL_HEIGHT : 0, right: 0, bottom: 0, left: 0 });
     usePlayerOverlayReservation('window-titlebar-reveal', 'window', titlebarRevealArea, usesCustomWindowChrome);
     const [isWindowMaximized, setIsWindowMaximized] = useState(false);
+    const [isWindowFullscreen, setIsWindowFullscreen] = useState(false);
     const hasFullscreenTitlebarButton = isElectronWindow && !hideFullscreenButton;
 
     useEffect(() => {
@@ -85,7 +86,31 @@ const AppShell: React.FC<AppShellProps> = ({
         };
     }, [useCustomWindowRadius]);
 
-    const shouldApplyWindowRadius = useCustomWindowRadius && !isWindowMaximized;
+    useEffect(() => {
+        const electron = window.electron;
+        if (!useCustomWindowRadius || !electron?.isWindowFullscreen) {
+            setIsWindowFullscreen(false);
+            return;
+        }
+
+        let active = true;
+        let fullscreenEventReceived = false;
+        const unsubscribe = electron.onWindowFullscreenChanged(fullscreen => {
+            fullscreenEventReceived = true;
+            if (active) setIsWindowFullscreen(fullscreen);
+        });
+        // A native event can arrive before the initial IPC response.
+        void electron.isWindowFullscreen().then(fullscreen => {
+            if (active && !fullscreenEventReceived) setIsWindowFullscreen(fullscreen);
+        }).catch(() => {});
+
+        return () => {
+            active = false;
+            unsubscribe?.();
+        };
+    }, [useCustomWindowRadius]);
+
+    const shouldApplyWindowRadius = useCustomWindowRadius && !isWindowMaximized && !isWindowFullscreen;
     const areTitlebarControlsVisible = isTitlebarRevealed || alwaysShowMainWindowTitlebar;
     const shouldRenderTitlebarBackdrop = !isPlayerView || (useCustomWindowRadius && !isMainWindowClickThroughEnabled);
     const titlebarBackdropClassName = `absolute inset-0 backdrop-blur-sm ${
@@ -104,7 +129,7 @@ const AppShell: React.FC<AppShellProps> = ({
             className="fixed inset-0 w-full h-full flex flex-col overflow-hidden font-sans transition-colors duration-500"
             style={{
                 ...appStyle,
-                borderRadius: shouldApplyWindowRadius ? '18px' : undefined,
+                borderRadius: shouldApplyWindowRadius ? (window.electron?.platform === 'win32' ? '8px' : '18px') : undefined,
                 boxShadow: showTransparentWindowBorder ? 'inset 0 0 0 1px rgba(255,255,255,0.24)' : undefined,
             }}
         >
